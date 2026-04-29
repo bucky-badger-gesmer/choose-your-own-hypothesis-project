@@ -1,4 +1,4 @@
-# Project Title
+# Detection Method and Insolation Flux in Exoplanets
 
 ## Project Scaffold
 
