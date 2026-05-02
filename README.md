@@ -6,20 +6,26 @@
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Topic / Question**                  | Does discovery method influence the insolation flux of detected planets? If so, are our catalogs of potentially Earth-like worlds shaped by search technique rather than true planetary distribution?                                                                                                                                                                                                                                                                     |
 | **Hypothesis**                        | **H₀:** Discovery method has no influence on insolation flux. The mean (or median) insolation flux of planets found by the Transit method is equal to that of planets found by the Radial Velocity method. Any observed difference is due to random chance.<br><br>**H₁:** Discovery method does influence insolation flux. The mean (or median) insolation flux of planets found by the Transit method differs from that of planets found by the Radial Velocity method. |
-| **Outcome / Metric / Test Statistic** | `pl_insol` (Insolation Flux [Earth Flux]); difference in means (or medians) between Transit and Radial Velocity groups                                                                                                                                                                                                                                                                                                                                                    |
+| **Outcome / Metric / Test Statistic** | `pl_insol` (Insolation Flux [Earth Flux]); difference in means between Transit and Radial Velocity groups                                                                                                                                                                                                                                                                                                                                                                 |
 | **Units of Analysis**                 | Individual exoplanet entries from the NASA Exoplanet Archive                                                                                                                                                                                                                                                                                                                                                                                                              |
 | **Data Source(s)**                    | [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=PS) — PS_2026.04.26_08.19.28.csv                                                                                                                                                                                                                                                                                                                        |
-| **Why this data works**               | The dataset contains 39,803 exoplanet entries with discovery method, insolation flux, and equilibrium temperature — enough observations for both Transit (35,713) and Radial Velocity (2,885) groups to support resampling-based inference                                                                                                                                                                                                                                |
+| **Why this data works**               | After filtering to one row per planet (`default_flag == 1`) and dropping missing insolation values, we have 916 planets — 795 Transit and 121 Radial Velocity — enough for both permutation testing and bootstrap resampling                                                                                                                                                                                                                                              |
 | **Uncertainty Metric**                | Bootstrap confidence interval for the difference in mean/median insolation flux between the two discovery methods                                                                                                                                                                                                                                                                                                                                                         |
 | **Null Hypothesis**                   | The type of detection technique astronomers use does not change the amount of starlight received by the planets they find. Any difference in insolation flux between Transit and Radial Velocity planets is due to random chance.                                                                                                                                                                                                                                         |
 
 ## 1. Research Question
 
-What are you investigating, and why does it matter?
+For this project, I wanted to explore the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/index.html) dataset. As of May 2, 2026, there are 6,278 confirmed planets that have been curated by NASA. Ultimately, I saw that most planets are usually discovered through two means: Transit, or Radial Velocity. Of the 6,278 planets archived by NASA, 4,640 were discovered through Transit, with 1,180 being discovered through Radial Velocity, which combined accounts for nearly 93% of all confirmed planets.
+
+These two methods use different approaches for discovering planets. Transit looks for planets that come between us and their star, observed as a small dip in the star's brightness; this works best for planets orbiting extremely close to their star, which means they probably receive more starlight than Earth does. Radial Velocity measures a star's wobble caused by the gravitational pull of an orbiting planet, which tends to favor planets that are heavier and/or closer to their star, since both make the wobble stronger and easier to detect.
+
+11:25 AMClaude responded: I then began to wonder about life beyond our planet Earth.I then began to wonder about life beyond our planet Earth. Could there be a statistically discernible difference in the planets discovered between these two methods? I saw that there's a measure called insolation flux for each planet, which is simply how much starlight a planet receives relative to Earth (where Earth = `1.0`). Thus, this project seeks to answer if there's a statistically discernible difference in insolation flux for planets discovered between Transit and Radial Velocity, and what that could mean in our search for Earth-like planets.
 
 ## 2. Hypothesis
 
-State your null and alternative hypotheses clearly and succinctly.
+**H₀ (Null):** Discovery method has no influence on insolation flux. The mean insolation flux of planets found by the Transit method is equal to that of planets found by the Radial Velocity method. Any observed difference is due to random chance.
+
+**H₁ (Alternative):** Discovery method does influence insolation flux. The mean insolation flux of planets found by the Transit method differs from that of planets found by the Radial Velocity method.
 
 ## 3. Data Description
 
@@ -27,36 +33,36 @@ We use the [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu/cg
 
 ## 4. Methods
 
-Summarize how you analyzed the data:
+We filtered the NASA Exoplanet Archive to one row per planet (`default_flag == 1`), kept only Transit and Radial Velocity discoveries, and dropped rows missing insolation flux (`pl_insol`), leaving 916 planets (795 Transit, 121 RV).
 
-- The test statistic for your permutation test
-- How you simulated or resampled under the null hypothesis
-- The metric(s) for which you created bootstrap confidence intervals
-- Why the CLT does not apply to at least one metric
+**Permutation test:** We simulated 10,000 permutations by randomly shuffling the discovery method labels and recomputing the test statistic each time. We ran two versions: one using the difference in means (matching our hypothesis) and one using the difference in medians (robust to extreme outliers). The means-based permutation produces a bimodal null distribution because hot Jupiters shuffled into the small RV group can spike the group mean. The medians-based permutation confirms the result with a clean unimodal distribution. We calculated a two-sided p-value for each as the proportion of permuted differences at least as extreme as the observed value.
+
+**Bootstrap confidence intervals:** We constructed 95% CIs for two metrics: the difference in means and the difference in medians. For each, we drew 10,000 bootstrap samples (with replacement, same size as original) independently from each group, computed the statistic, and used the 2.5th and 97.5th percentiles as CI bounds. The difference in means is the primary metric matching our hypothesis. The difference in medians is a secondary metric where the CLT does not apply. There is no closed-form standard error for the median of heavily skewed data, making bootstrapping the only viable approach.
 
 ## 5. Results
 
-Present your main findings:
+| Metric                               | Observed Value    | Permutation p-value | 95% Bootstrap CI |
+| ------------------------------------ | ----------------- | ------------------- | ---------------- |
+| Difference in means (Transit − RV)   | 452.35 Earth flux | 0.0212              | [349, 598]       |
+| Difference in medians (Transit − RV) | 75.61 Earth flux  | 0.0025              | [62, 97]         |
 
-- Key summary statistics and visualizations
-- Observed test statistic and p-value (if applicable)
-- Bootstrap confidence intervals for relevant metrics
+Both permutation tests reject the null hypothesis at α = 0.05, with the medians-based test (p = 0.0025) providing stronger evidence than the means-based test (p = 0.0212). Transit-detected planets receive significantly more stellar flux than RV-detected planets. Both bootstrap confidence intervals exclude zero, confirming the result. The typical (median) Transit planet receives about 80 Earth flux, compared to about 4 Earth flux for the typical RV planet.
 
 ## 6. Uncertainty Estimation
 
-Discuss your resampling results:
-
-- How many resamples you used
-- What the bootstrap or randomization distributions looked like
-- How you interpret the interval estimates
+We used 10,000 resamples for both the permutation tests and the bootstrap confidence intervals. The permutation distribution for the difference in means is bimodal because extreme outliers shuffled into the small RV group can dominate the group mean. The permutation distribution for the difference in medians is unimodal and well-behaved, confirming the result is not driven by a handful of hot Jupiters. Both permutation tests reject the null at α = 0.05. On the bootstrap side, the distribution for the difference in means is right-skewed, reflecting the heavy tail in the underlying insolation data, while the distribution for the difference in medians is tighter and more symmetric. Both 95% CIs exclude zero, giving us confidence that the difference is real and not an artifact of sampling variability.
 
 ## 7. Limitations
 
-Briefly note any limitations in data, assumptions, or methods, including sources of bias or missing data.
+- We can't tell whether Transit and RV find planets with genuinely different insolation, or whether each method just happens to be better at spotting certain kinds of planets. Transit is biased toward short-period orbits that sit close to their star, so of course those planets receive more flux. That's sort of the whole point of this analysis, but it does mean we're measuring a selection effect, not necessarily a physical one.
+- After filtering, Transit planets outnumber RV planets roughly 7:1 (795 vs 121). That imbalance is real and reflects the field, but it means our RV estimates are less precise and the bootstrap CIs for that group are wider.
+- Not every planet has a measured `pl_insol` value, and we had to drop those rows. The planets missing that measurement probably aren't a random subset, so our filtered sample may not perfectly represent the full population.
+- We used `default_flag == 1` to pick one row per planet, which gives us NASA's "best" parameter set. But "best" is a curatorial choice, and a different set of measurements for the same planet could yield slightly different insolation values.
 
 ## 8. References
 
-List all datasets, tools, libraries, or papers you cited.
+- NASA Exoplanet Archive — Transit method overview: https://exoplanetarchive.ipac.caltech.edu/docs/transit.html
+- NASA Exoplanet Archive — Radial Velocity method overview: https://exoplanetarchive.ipac.caltech.edu/docs/rv.html
 
 ---
 
