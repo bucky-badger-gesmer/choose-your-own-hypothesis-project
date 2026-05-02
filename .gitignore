@@ -9,5 +9,4 @@ wheels/
 # Virtual environments
 .venv
 
-# Data file:
-PS_2026.04.26_08.19.28.csv
+data/
